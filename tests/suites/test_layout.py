@@ -1,4 +1,4 @@
-"""First-pass layout check on the Tier 1 and Tier 2 phone and tablet viewports from the device matrix.
+"""First-pass layout check on the Tier 1 and Tier 2 mobile viewports from the device matrix.
 
 This is emulation: it catches an unreachable button or a sideways scroll, nothing more.
 Keyboard, autofill and WebView behavior still need the real devices (see the matrix page).
