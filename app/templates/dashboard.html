@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block body %}
+<h1 data-testid="welcome">Welcome, {{ email }}</h1>
+{% if sub %}
+  <p data-testid="plan">Plan: <strong>{{ sub["plan"] }}</strong> ({{ sub["status"] }}), renews {{ sub["current_period_end"] }}</p>
+{% else %}
+  <p data-testid="plan">No active subscription.</p>
+  <a class="button" href="/checkout" data-testid="choose-plan">Choose a plan</a>
+{% endif %}
+{% endblock %}

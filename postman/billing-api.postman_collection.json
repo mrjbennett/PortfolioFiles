@@ -1,0 +1,923 @@
+{
+  "info": {
+    "_postman_id": "6f1d0c52-4a1e-4c58-9e57-0a5c1d7b2e11",
+    "name": "Billing API",
+    "description": "Postman collection for portfolio-demo-billing-app. Run with: scripts/newman.sh [rc3|fixed]",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 Setup",
+      "item": [
+        {
+          "name": "Reset sandbox",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sandbox/reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sandbox",
+                "reset"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"sandbox reset\", () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set the clock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sandbox/clock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sandbox",
+                "clock"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"now\": \"{{clockStart}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"clock pinned to the start of the 31-day scenario\", () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().now).to.eql(pm.environment.get(\"clockStart\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "accounts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"email\", \"qa+\" + Date.now() + \"@example.com\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 account created\", () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set(\"customerId\", pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get access token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 with a bearer token\", () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.token_type).to.eql(\"Bearer\");",
+                  "  pm.expect(body.access_token).to.be.a(\"string\");",
+                  "  pm.collectionVariables.set(\"accessToken\", body.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Reproducible from a cold environment: reset, pin the clock, create an account, get a token."
+    },
+    {
+      "name": "01 Subscriptions",
+      "item": [
+        {
+          "name": "Create subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscriptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subscriptions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"standard\",\n  \"card\": {\n    \"number\": \"{{cardNumber}}\",\n    \"exp\": \"{{cardExpiry}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"idempotencyKey\", pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 with a usable subscription\", () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.all.keys(",
+                  "    \"id\", \"status\", \"plan\", \"current_period_end\", \"customer_id\"",
+                  "  );",
+                  "  pm.expect(body.status).to.eql(\"active\");",
+                  "  pm.expect(body.customer_id).to.eql(pm.collectionVariables.get(\"customerId\"));",
+                  "  pm.collectionVariables.set(\"subscriptionId\", body.id);",
+                  "});",
+                  "",
+                  "pm.test(\"Location header points at the new subscription\", () => {",
+                  "  const id = pm.response.json().id;",
+                  "  pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/v1/subscriptions/\" + id);",
+                  "});",
+                  "",
+                  "pm.test(\"responds inside the agreed budget\", () => {",
+                  "  pm.expect(pm.response.responseTime).to.be.below(800);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create subscription (replay, same idempotency key)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscriptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subscriptions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"standard\",\n  \"card\": {\n    \"number\": \"{{cardNumber}}\",\n    \"exp\": \"{{cardExpiry}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"replay returns 200 and the original subscription\", () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get(\"subscriptionId\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Processor view: charges for the subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sandbox/processor/charges?subscription_id={{subscriptionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sandbox",
+                "processor",
+                "charges"
+              ],
+              "query": [
+                {
+                  "key": "subscription_id",
+                  "value": "{{subscriptionId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"no second charge on the processor\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.count, \"charges captured for this subscription\").to.eql(1);",
+                  "  pm.expect(body.total, \"total captured, in cents\").to.eql(9900);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "BUG-1142 lives here: the replayed request must not reach the processor a second time."
+    },
+    {
+      "name": "02 Database",
+      "item": [
+        {
+          "name": "Subscription rows for the account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sandbox/db/subscriptions?account_id={{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sandbox",
+                "db",
+                "subscriptions"
+              ],
+              "query": [
+                {
+                  "key": "account_id",
+                  "value": "{{customerId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"exactly one subscription row, active, on the standard plan\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.count).to.eql(1);",
+                  "  pm.expect(body.data[0].plan).to.eql(\"standard\");",
+                  "  pm.expect(body.data[0].status).to.eql(\"active\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Paid invoices for the subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sandbox/db/invoices?subscription_id={{subscriptionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sandbox",
+                "db",
+                "invoices"
+              ],
+              "query": [
+                {
+                  "key": "subscription_id",
+                  "value": "{{subscriptionId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"one paid invoice, equal to the plan price\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.paid_count).to.eql(1);",
+                  "  pm.expect(body.paid_total).to.eql(9900);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ledger entries for the subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sandbox/ledger?subscription_id={{subscriptionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sandbox",
+                "ledger"
+              ],
+              "query": [
+                {
+                  "key": "subscription_id",
+                  "value": "{{subscriptionId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"one ledger entry for the payment\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.count).to.eql(1);",
+                  "  pm.expect(body.data[0].amount).to.eql(9900);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "State the API cannot show you: the app database after a charge. Read through the sandbox's read-only views; the PyTest suite queries the SQLite file directly."
+    },
+    {
+      "name": "03 Plan change",
+      "item": [
+        {
+          "name": "Advance the clock 12 days",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sandbox/clock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sandbox",
+                "clock"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"now\": \"{{clockUpgrade}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"clock advanced\", () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().now).to.eql(pm.environment.get(\"clockUpgrade\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upgrade to the pro plan",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscriptions/{{subscriptionId}}/plan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subscriptions",
+                "{{subscriptionId}}",
+                "plan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"pro\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 and the tier is updated\", () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().plan).to.eql(\"pro\");",
+                  "});",
+                  "",
+                  "pm.test(\"effective date is the day the plan changed\", () => {",
+                  "  const expected = pm.environment.get(\"clockUpgrade\").slice(0, 10);",
+                  "  pm.expect(pm.response.json().effective_date).to.eql(expected);",
+                  "});",
+                  "",
+                  "pm.test(\"proration matches the finance-supplied value\", () => {",
+                  "  const expected = Number(pm.environment.get(\"expectedProration\"));",
+                  "  const actual = pm.response.json().amount_due / 100;",
+                  "  pm.expect(actual).to.eql(expected);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "BUG-1156 lives here: 12 days into a 31-day period."
+    },
+    {
+      "name": "04 Invoices",
+      "item": [
+        {
+          "name": "List open invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/invoices?status=open",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "invoices"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "open"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"an array holding only this account's open invoices\", () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.be.an(\"array\");",
+                  "  pm.expect(body.data.length).to.eql(1);",
+                  "  body.data.forEach((invoice) => {",
+                  "    pm.expect(invoice.customer_id).to.eql(pm.collectionVariables.get(\"customerId\"));",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Webhooks",
+      "item": [
+        {
+          "name": "Fetch the payment event",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sandbox/events?subscription_id={{subscriptionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sandbox",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "subscription_id",
+                  "value": "{{subscriptionId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"one payment event to replay\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.count).to.eql(1);",
+                  "  const event = body.data[0];",
+                  "  pm.collectionVariables.set(\"eventPayload\", JSON.stringify({",
+                  "    id: event.id,",
+                  "    type: event.type,",
+                  "    subscription_id: event.subscription_id,",
+                  "    amount: event.amount",
+                  "  }));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replay the event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{{eventPayload}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"duplicate event acknowledged, not reprocessed\", () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql(\"duplicate\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ledger entries after the replay",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sandbox/ledger?subscription_id={{subscriptionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sandbox",
+                "ledger"
+              ],
+              "query": [
+                {
+                  "key": "subscription_id",
+                  "value": "{{subscriptionId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"ledger entry count unchanged\", () => {",
+                  "  pm.expect(pm.response.json().count).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 Negative",
+      "item": [
+        {
+          "name": "Get subscription without a token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscriptions/{{subscriptionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subscriptions",
+                "{{subscriptionId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401 and no subscription data in the body\", () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.not.have.property(\"plan\");",
+                  "  pm.expect(body).to.not.have.property(\"customer_id\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create subscription with a malformed body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscriptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subscriptions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"standard\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 naming the missing card\", () => {",
+                  "  pm.response.to.have.status(422);",
+                  "  pm.expect(pm.response.json().error).to.eql(\"invalid_card\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deliver an event with a missing field",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_missing_amount\",\n  \"type\": \"payment.succeeded\",\n  \"subscription_id\": \"{{subscriptionId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 and the event is rejected\", () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().error).to.eql(\"invalid_event\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "At least one negative case per surface: auth, request body, inbound event."
+    }
+  ]
+}

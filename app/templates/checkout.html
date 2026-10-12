@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Checkout{% endblock %}
+{% block body %}
+<h1>Choose a plan</h1>
+<form id="checkout-form">
+  <label for="plan">Plan</label>
+  <select id="plan" name="plan" data-testid="plan">
+    {% for name, price in plans.items() %}
+      <option value="{{ name }}">{{ name|capitalize }} · {{ price }} / month</option>
+    {% endfor %}
+  </select>
+
+  <label for="card-number">Card number</label>
+  <input id="card-number" name="number" inputmode="numeric" autocomplete="cc-number"
+         pattern="[0-9 ]{12,19}" required data-testid="card-number">
+
+  <label for="card-expiry">Expiry (MM/YY)</label>
+  <input id="card-expiry" name="exp" inputmode="numeric" autocomplete="cc-exp"
+         pattern="(0[1-9]|1[0-2])/[0-9]{2}" placeholder="MM/YY" required data-testid="card-expiry">
+  <p id="expiry-error" class="msg bad" role="alert" data-testid="expiry-error"></p>
+
+  <p id="result" class="msg" role="status" data-testid="result"></p>
+</form>
+
+<div class="bar">
+  <button id="confirm" type="submit" form="checkout-form" data-testid="confirm">Confirm</button>
+</div>
+
+<script>
+  const FIXED = {{ 'true' if fixed else 'false' }};
+  const form = document.getElementById('checkout-form');
+  const confirmButton = document.getElementById('confirm');
+  const result = document.getElementById('result');
+  const expiryError = document.getElementById('expiry-error');
+  const idempotencyKey = crypto.randomUUID();
+
+  function expiryInPast(value) {
+    const [mm, yy] = value.split('/').map(Number);
+    const now = new Date();
+    return (2000 + yy) * 12 + mm < now.getFullYear() * 12 + (now.getMonth() + 1);
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    result.textContent = '';
+    result.className = 'msg';
+    expiryError.textContent = '';
+
+    // Fixed in 4.2.1 (BUG-1163): reject a past expiry before anything is sent.
+    // The rc3 build relies on the input's pattern attribute, which only checks the format.
+    if (FIXED && expiryInPast(form.exp.value)) {
+      expiryError.textContent = 'Card expiry is in the past.';
+      return;
+    }
+    // Fixed in 4.2.1 (BUG-1142): disable on the click. The rc3 build disables the button
+    // only after the response arrives, so a double-click sends two requests.
+    if (FIXED) confirmButton.disabled = true;
+
+    const res = await fetch('/v1/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify({
+        plan: form.plan.value,
+        card: { number: form.number.value.replace(/ /g, ''), exp: form.exp.value },
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      result.textContent = 'Subscription active';
+      result.className = 'msg ok';
+      result.dataset.subscriptionId = data.id;
+      confirmButton.disabled = true;
+    } else {
+      result.textContent = data.message;
+      result.className = 'msg bad';
+      confirmButton.disabled = false;
+    }
+  });
+</script>
+{% endblock %}

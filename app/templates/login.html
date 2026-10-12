@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block body %}
+<h1>Sign in</h1>
+<form id="login-form">
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" autocomplete="username" required data-testid="email">
+  <label for="password">Password</label>
+  <input id="password" name="password" type="password" autocomplete="current-password" required data-testid="password">
+  <p id="error" class="msg bad" role="alert" data-testid="error"></p>
+  <button type="submit" data-testid="sign-in">Sign in</button>
+</form>
+<script>
+  const form = document.getElementById('login-form');
+  const error = document.getElementById('error');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    error.textContent = '';
+    const res = await fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: form.email.value, password: form.password.value }),
+    });
+    const data = await res.json();
+    if (res.ok) { window.location = data.redirect; } else { error.textContent = data.message; }
+  });
+</script>
+{% endblock %}
