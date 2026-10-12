@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "6f1d0c52-4a1e-4c58-9e57-0a5c1d7b2e11",
     "name": "Billing API",
-    "description": "Postman collection for portfolio-demo-billing-app. Run with: scripts/newman.sh [rc3|fixed]",
+    "description": "Postman collection for the PortfolioFiles demo app. Run with: scripts/newman.sh [rc3|fixed]",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
