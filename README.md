@@ -1,4 +1,4 @@
-# portfolio-demo-billing-app
+# Portfolio Files
 
 A small subscription-billing app with three known defects, plus the QA work that finds them: a Postman collection, a PyTest + Playwright suite, a test case library and a device-matrix viewport check. It is the shared codebase behind the sample deliverables on [mikebennettqa.com](https://mikebennettqa.com).
 
@@ -9,8 +9,8 @@ Everything is fictional. There is no client data, no real payment processor and 
 You need Python 3.10+ and, for the Postman run, Node 18+.
 
 ```bash
-git clone https://github.com/mrjbennett/portfolio-demo-billing-app
-cd portfolio-demo-billing-app
+git clone https://github.com/mrjbennett/PortfolioFiles
+cd PortfolioFiles
 python3 -m venv .venv && source .venv/bin/activate
 make setup            # Python dependencies and the Chromium that Playwright drives
 
