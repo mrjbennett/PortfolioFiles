@@ -15,7 +15,7 @@ python3 -m venv .venv && source .venv/bin/activate
 make setup            # Python dependencies and the Chromium that Playwright drives
 
 make test             # build 4.2.1-rc3: 4 tests fail, one or more per seeded defect
-make test-fixed       # build 4.2.1: all 18 pass
+make test-fixed       # build 4.2.1: all 20 pass
 make newman           # Postman collection on rc3: 2 assertions fail
 make newman-fixed     # Postman collection on 4.2.1: all 23 pass
 ```

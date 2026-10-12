@@ -1,4 +1,4 @@
-"""First-pass layout check on the Tier 1 and Tier 2 viewports from the device matrix.
+"""First-pass layout check on the Tier 1 and Tier 2 phone and tablet viewports from the device matrix.
 
 This is emulation: it catches an unreachable button or a sideways scroll, nothing more.
 Keyboard, autofill and WebView behavior still need the real devices (see the matrix page).
@@ -9,9 +9,11 @@ import pytest
 from pages.login_page import LoginPage
 
 DEVICES = [
-    pytest.param("iPhone 13", 390, 844, 3, id="iphone-13"),
-    pytest.param("Galaxy S23", 360, 780, 3, id="galaxy-s23"),
-    pytest.param("Pixel 6a", 412, 915, 2.625, id="pixel-6a"),
+    pytest.param("iPhone 16 Pro Max", 440, 956, 3, id="iphone-16-pro-max"),
+    pytest.param("Galaxy A03s", 360, 800, 2, id="galaxy-a03s"),
+    pytest.param("iPhone SE (3rd gen)", 375, 667, 2, id="iphone-se-3"),
+    pytest.param("iPad Air 11-inch (M2)", 820, 1180, 2, id="ipad-air-11"),
+    pytest.param("iPad mini (6th gen)", 744, 1133, 2, id="ipad-mini-6"),
 ]
 
 
