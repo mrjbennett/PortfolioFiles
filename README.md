@@ -1,4 +1,4 @@
-# Portfolio Files
+# Portfolio Sample Files
 
 A small subscription-billing app with three known defects, plus the QA work that finds them: a Postman collection, a PyTest + Playwright suite, a test case library and a device-matrix viewport check. It is the shared codebase behind the sample deliverables on [mikebennettqa.com](https://mikebennettqa.com).
 
